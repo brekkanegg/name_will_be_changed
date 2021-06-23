@@ -4,3 +4,4 @@
 ipynbs/
 **/wandb/
 **/runs
+**/workspace.code-workspace

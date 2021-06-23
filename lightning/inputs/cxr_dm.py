@@ -50,6 +50,7 @@ class CXRDataset(torch.utils.data.Dataset):
                 ]
             )
         )
+
         label = label.astype("float32")
 
         img = cv2.imread(img_path, -1).astype("float32")
@@ -60,7 +61,7 @@ class CXRDataset(torch.utils.data.Dataset):
         img = (img - img.min()) / (img.max() - img.min())
 
         if self.transform or self.training:
-            # clahe
+
             if np.random.random() < 0.5:
                 img *= 255.0
                 img = img.astype(np.uint8)

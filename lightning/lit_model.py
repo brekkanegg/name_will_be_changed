@@ -9,8 +9,6 @@ import torchmetrics
 
 # import segmentation_models_pytorch as smp
 
-from metrics.cls_metric import ClsMetric
-
 
 class LitModel(pl.LightningModule):
     def __init__(self, cfg):
@@ -26,6 +24,8 @@ class LitModel(pl.LightningModule):
         self.criterion = torch.nn.BCEWithLogitsLoss()  # torch.nn.CrossEntropyLoss()
         self.train_metric = torchmetrics.Accuracy()
         self.val_metric = torchmetrics.Accuracy()
+
+        self.test_preds = []
 
     def forward(self, x):
         # in lightning, forward defines the prediction/inference actions
@@ -134,53 +134,12 @@ class LitModel(pl.LightningModule):
         )
 
     # FIXME:
-    # def test_step(self, batch, batch_idx):
-    #     img, mask, mask_cls, _, img_path, _ = batch
-    #     logit_seg, logit_cls = self.forward(img)
+    def test_step(self, batch, batch_idx):
+        img, img_path = batch
+        logit = self.model(img)
+        pred = torch.sigmoid(logit).detach().cpu().numpy().tolist()
 
-    #     # Metric
-    #     loss_seg = self.seg_criterion(logit_seg, mask)
-    #     loss_cls = self.cls_criterion(logit_cls, mask_cls)
-    #     loss = loss_seg * 1 + loss_cls * 0.1
-
-    #     dice = self.calc_dice(torch.sigmoid(logit_seg), mask)
-
-    #     loss_dict = {
-    #         # "vloss": loss,
-    #         "ttloss_s": loss_seg,
-    #         "ttloss_c": loss_cls,
-    #         "ttdice": dice,
-    #     }
-    #     self.log_dict(
-    #         loss_dict,
-    #         on_step=False,
-    #         on_epoch=True,
-    #         prog_bar=True,
-    #         logger=False,
-    #     )
-
-    #     return {
-    #         "logit": (logit_seg, logit_cls),
-    #         "batch": ((img, mask, mask_cls, _, img_path, _)),
-    #     }
-
-    # def test_step_end(self, outputs):
-    #     (logit_seg, logit_cls) = outputs["logit"]
-    #     (img, mask, mask_cls, _, img_path, _) = outputs["batch"]
-    #     self.seg_metric_each(
-    #         (logit_seg, logit_cls), (img, mask, mask_cls, _, img_path, _)
-    #     )
-    #     self.cls_metric_each(
-    #         (logit_seg, logit_cls), (img, mask, mask_cls, _, img_path, _)
-    #     )
+        self.test_preds.append((img_path, pred))
 
     # def test_epoch_end(self, test_step_outputs):
-    #     lesion_metric_dict_each = self.seg_metric.compute_each()
-    #     image_metric_dict_each = self.cls_metric.compute_each()
-
-    #     csv_dirs = sorted(lesion_metric_dict_each.keys())
-    #     print("csv dirs: ", csv_dirs)
-    #     for csv in csv_dirs:
-    #         print(f"csv: {csv}")
-    #         print(lesion_metric_dict_each[csv])
-    #         print(image_metric_dict_each[csv])
+    #     return self.test_preds

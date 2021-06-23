@@ -14,33 +14,28 @@ import pytorch_lightning as pl
 import torch.multiprocessing
 
 from lit_model import LitModel
-from inputs.cxr_dm import CXRDataModule
+from inputs.cxr_dm_test import CXRDataModule
 
 # import mlflow.pytorch
-from callbacks import froc, visualizer
+# from callbacks import froc, visualizer
 
 
 def main(cfg):
 
     # tb_logger = pl.loggers.TensorBoardLogger(save_dir=cfg.weights_save_path)  # name=''
+    print(cfg)
 
     trainer = pl.Trainer(
         logger=False,  # mlf_logger,  #
-        default_root_dir=cfg.default_root_dir,
+        default_root_dir=None,
         num_nodes=cfg.num_nodes,
         num_processes=1,
         gpus=cfg.gpus,
-        auto_select_gpus=False,
-        track_grad_norm=cfg.track_grad_norm,
-        limit_train_batches=1.0,  # FIXME:  epoch_division
-        limit_val_batches=1.0,
-        limit_test_batches=1.0,
+        auto_select_gpus=True,
+        # track_grad_norm=cfg.track_grad_norm,
         progress_bar_refresh_rate=1,  # FIXME:
-        accelerator=cfg.accelerator,
-        sync_batchnorm=cfg.sync_batchnorm,
         precision=cfg.precision,
         weights_summary="top",
-        profiler=cfg.profiler,
         benchmark=cfg.benchmark,
         deterministic=cfg.deterministic,
         amp_backend="native",
@@ -50,7 +45,10 @@ def main(cfg):
     cxrdm = CXRDataModule(cfg)
     # model = LitModel(cfg)
     model = LitModel.load_from_checkpoint(cfg.ckpt_path)
-    trainer.test(model, datamodule=cxrdm)
+    trainer.test(model, datamodule=cxrdm)  # FIXME: trainer.predict is not working
+    test_preds = model.test_preds
+
+    return test_preds
 
 
 if __name__ == "__main__":
@@ -60,7 +58,11 @@ if __name__ == "__main__":
     # Path
     parser.add_argument("--ckpt_path", "--ckpt", type=str, required=True)
     parser.add_argument("--default_root_dir", "--root_dir", type=str, default=None)
-    parser.add_argument("--data_dir", type=str, default="/nfs3/chestpa/png_1024")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default="/data/minki/kaggle/siim-covid19/image_1280/test",
+    )
 
     # Resource
     parser.add_argument("--gpus", "--g", type=str, default="0")
@@ -111,9 +113,6 @@ if __name__ == "__main__":
     cfg = parser.parse_args()
 
     cfg.gpus = [int(g) for g in cfg.gpus.split(",")]  # right format: [0], [2,3,4]
-
-    if cfg.data_dir != "/nfs3/chestpa/png_1024":
-        print("Warning!: Data directory for test should be /nfs3/chestpa/png_1024!")
 
     # DEBUG:
     if cfg.debug:

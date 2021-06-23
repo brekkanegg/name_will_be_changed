@@ -12,7 +12,7 @@ import pytorch_lightning as pl
 import torch.multiprocessing
 
 from lit_model import LitModel
-from inputs.cxr_datamodule import CXRDataModule
+from inputs.cxr_dm import CXRDataModule
 
 from callbacks import visualizer
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
 
     # Train
     parser.add_argument("--resume_from_checkpoint", "--resume", type=str, default=None)
-    parser.add_argument("--max_epochs", "--max_ep", type=int, default=100)
+    parser.add_argument("--max_epochs", "--max_ep", type=int, default=30)
     parser.add_argument(
         "--stochastic_weight_avg", "--swa", action="store_true"
     )  # Do not Use

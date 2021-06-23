@@ -104,10 +104,10 @@ def train(
         data_dict = yaml.safe_load(f)  # data dict
         # NOTE: Apply fold
         data_dict["train"] = data_dict["train"].replace(
-            "/train.txt", f"/train{opt.fold}_v2.txt"
+            "/train_", f"/train{opt.fold}_"
         )
         data_dict["val"] = data_dict["val"].replace(
-            "/val.txt", f"/val{opt.fold}_v2.txt"
+            "/val_", f"/val{opt.fold}_"
         )
 
     # Loggers
@@ -714,7 +714,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cfg", type=str, default="", help="model.yaml path")
     parser.add_argument(
-        "--data", type=str, default="data/covid19.yaml", help="dataset.yaml path"
+        "--data", type=str, default="/data/minki/kaggle/siim-covid19/yolov5/meta.yaml", help="dataset.yaml path"
     )
     parser.add_argument("--fold", type=int, default=0)
 
@@ -841,6 +841,9 @@ if __name__ == "__main__":
     if opt.global_rank in [-1, 0]:
         check_git_status()
         check_requirements(exclude=["thop"])
+
+    # FIXME:
+    opt.data = opt.data + f'_{opt.img_size[0]}'
 
     # Resume
     wandb_run = check_wandb_resume(opt)

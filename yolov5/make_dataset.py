@@ -16,8 +16,9 @@ import random
 
 USER = "minki"
 DATA_DIR = f"/data/{USER}/kaggle/siim-covid19"
-SEED = 52
+SEED = 819
 
+IMAGE_SIZE = 512
 
 random.seed(SEED)
 np.random.seed(SEED)
@@ -36,7 +37,7 @@ df = pd.merge(df, df1, on="id", how="left")
 
 for i in range(df.shape[0]):
     a = df.loc[i, "id"]
-    f = open(DATA_DIR + f"/image_512/train/{a}.txt", "w")
+    f = open(DATA_DIR + f"/image_{IMAGE_SIZE}/train/{a}.txt", "w")
     b = df.loc[i, "label"].split()
     b_len = int(len(b) / 6)
     if b[0] == "none":
@@ -83,14 +84,9 @@ for fold, (train_idx, val_idx) in enumerate(
 
 train_df = df
 
-# FIXME:
-# train_df['image_path'] = f'{DATA_DIR}/image_512/' + train_df.id + '.png'
-
-# classes = ['0. opacity']
-
 
 def createImagesTxt(_images, filepath, data_dir):
-    images_dir = data_dir + "/image_512/train/"
+    images_dir = data_dir + f"/image_{IMAGE_SIZE}/train/"
     rows = []
     for img_id in _images:
         rows.append(images_dir + img_id + ".png")
@@ -109,7 +105,7 @@ for fold in range(7):
     train_files += list(train_df[train_df.fold != fold].id.unique())
     print(len(train_files), len(val_files))
 
-    train_path = DATA_DIR + f"/yolov5/train{fold}_v2.txt"
-    val_path = DATA_DIR + f"/yolov5/val{fold}_v2.txt"
+    train_path = DATA_DIR + f"/yolov5/train{fold}_{IMAGE_SIZE}.txt"
+    val_path = DATA_DIR + f"/yolov5/val{fold}_{IMAGE_SIZE}.txt"
     createImagesTxt(train_files, train_path, DATA_DIR)
     createImagesTxt(val_files, val_path, DATA_DIR)

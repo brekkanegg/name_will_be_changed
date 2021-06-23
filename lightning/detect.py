@@ -12,6 +12,7 @@ import random
 import torch
 import pytorch_lightning as pl
 import torch.multiprocessing
+import pickle
 
 from lit_model import LitModel
 from inputs.cxr_dm_test import CXRDataModule
@@ -48,7 +49,7 @@ def main(cfg):
     trainer.test(model, datamodule=cxrdm)  # FIXME: trainer.predict is not working
     test_preds = model.test_preds
 
-    return test_preds
+    pickle.dump("test_preds.pickle", test_preds)
 
 
 if __name__ == "__main__":

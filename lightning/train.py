@@ -132,8 +132,9 @@ if __name__ == "__main__":
     # parser.add_argument("--neg_ratio", "--neg", type=float, default=1.0)
     parser.add_argument("--label_smoothing", "--smooth", type=float, default=0.1)
 
-    # Opts
+    # Model
     parser.add_argument("--model", type=str, default="tf_efficientnet_b4")  # 'simple'
+    parser.add_argument("--pretrained", action="store_false")  # 'simple'
 
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")  # Do not Use

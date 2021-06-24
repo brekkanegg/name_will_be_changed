@@ -29,7 +29,7 @@ def main(cfg):
     trainer = pl.Trainer(
         logger=False,  # mlf_logger,  #
         default_root_dir=None,
-        num_nodes=cfg.num_nodes,
+        num_nodes=1,
         num_processes=1,
         gpus=cfg.gpus,
         auto_select_gpus=True,

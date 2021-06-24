@@ -18,7 +18,7 @@ class LitModel(pl.LightningModule):
         self.save_hyperparameters()
 
         self.model = timm.create_model(
-            cfg.model, pretrained=True, in_chans=1, num_classes=4
+            cfg.model, pretrained=cfg.pretrained, in_chans=1, num_classes=4
         )
 
         self.criterion = torch.nn.BCEWithLogitsLoss()  # torch.nn.CrossEntropyLoss()

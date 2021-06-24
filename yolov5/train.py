@@ -103,12 +103,8 @@ def train(
     with open(opt.data) as f:
         data_dict = yaml.safe_load(f)  # data dict
         # NOTE: Apply fold
-        data_dict["train"] = data_dict["train"].replace(
-            "/train_", f"/train{opt.fold}_"
-        )
-        data_dict["val"] = data_dict["val"].replace(
-            "/val_", f"/val{opt.fold}_"
-        )
+        data_dict["train"] = data_dict["train"].replace("/train_", f"/train{opt.fold}_")
+        data_dict["val"] = data_dict["val"].replace("/val_", f"/val{opt.fold}_")
 
     # Loggers
     loggers = {"wandb": None, "tb": None}  # loggers dict
@@ -714,7 +710,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cfg", type=str, default="", help="model.yaml path")
     parser.add_argument(
-        "--data", type=str, default="/data/minki/kaggle/siim-covid19/yolov5/meta.yaml", help="dataset.yaml path"
+        "--data",
+        type=str,
+        default="/data/minki/kaggle/siim-covid19/yolov5/meta.yaml",
+        help="dataset.yaml path",
     )
     parser.add_argument("--fold", type=int, default=0)
 
@@ -726,14 +725,15 @@ if __name__ == "__main__":
         "--batch-size",
         "--b",
         type=int,
-        default=32,
+        default=4,
         help="total batch size for all GPUs",
     )
     parser.add_argument(
         "--img-size",
+        "--ims",
         nargs="+",
         type=int,
-        default=[512, 512],
+        default=[1280, 1280],
         help="[train, test] image sizes",
     )
     parser.add_argument("--rect", action="store_true", help="rectangular training")
@@ -843,7 +843,7 @@ if __name__ == "__main__":
         check_requirements(exclude=["thop"])
 
     # FIXME:
-    opt.data = opt.data + f'_{opt.img_size[0]}'
+    opt.data = opt.data.split(".yaml")[0] + f"_{opt.img_size[0]}.yaml"
 
     # Resume
     wandb_run = check_wandb_resume(opt)

@@ -16,7 +16,7 @@ import random
 
 USER = "minki"
 DATA_DIR = f"/data/{USER}/kaggle/siim-covid19"
-SEED = 819
+SEED = 92819
 
 IMAGE_SIZE = 512
 
@@ -36,6 +36,7 @@ df1.columns = ["id", "dim0", "dim1", "split"]
 df = pd.merge(df, df1, on="id", how="left")
 
 for i in range(df.shape[0]):
+    # FIXME:
     a = df.loc[i, "id"]
     f = open(DATA_DIR + f"/image_{IMAGE_SIZE}/train/{a}.txt", "w")
     b = df.loc[i, "label"].split()

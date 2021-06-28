@@ -18,6 +18,7 @@ from callbacks import visualizer
 
 
 def main(cfg):
+    print(cfg)
 
     # Callbacks
     early_stopping = pl.callbacks.EarlyStopping(
@@ -79,7 +80,15 @@ def main(cfg):
         callbacks=callbacks,
     )
 
+    if cfg.data_version == 2:
+        from inputs.cxr_dm_2 import CXRDataModule
+
+    if cfg.auxiliary:
+        from lit_model_aux import LitModel
+        from inputs.cxr_dm_aux import CXRDataModule
+
     cxrdm = CXRDataModule(cfg)
+
     model = LitModel(cfg)
 
     trainer.fit(model, datamodule=cxrdm)
@@ -126,20 +135,27 @@ if __name__ == "__main__":
 
     # Data
     parser.add_argument("--fold_index", "--fold", "--f", type=int, default=0)
-    parser.add_argument("--batch_size", "--batch", type=int, default=8)
+    parser.add_argument("--batch_size", "--batch", type=int, default=5)
     parser.add_argument("--auto_scale_batch_size", default=None)  # 'power'
-    parser.add_argument("--image_size", type=int, default=768)
+    parser.add_argument("--image_size", type=int, default=600)
     # parser.add_argument("--neg_ratio", "--neg", type=float, default=1.0)
     parser.add_argument("--label_smoothing", "--smooth", type=float, default=0.1)
+    parser.add_argument("--data_version", "--dv", type=int, default=2)
 
     # Model
-    parser.add_argument("--model", type=str, default="tf_efficientnet_b4")  # 'simple'
+    parser.add_argument("--model", type=str, default="tf_efficientnet_b7_ns")
+    # tf_efficientnet_l2_ns, tf_efficientnetv2_l_in21ft1k, "tf_efficientnet_b7_ns"
     parser.add_argument("--pretrained", action="store_false")  # 'simple'
+    parser.add_argument("--drop_rate", type=float, default=0.5)  # 'simple'
+    parser.add_argument("--in_channels", type=int, default=3)  # 'simple'
+    parser.add_argument("--auxiliary", "--aux", action="store_true")  # 'simple'
 
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")  # Do not Use
-    parser.add_argument("--lr", type=float, default=7e-5)
-    parser.add_argument("--weight_value", type=float, default=10.0)
+    parser.add_argument("--lr", type=float, default=1e-4)  # 7e-5
+    parser.add_argument("--loss", type=str, default="ce")  # 'simple'
+    parser.add_argument("--optimizer", type=str, default="sgd")  # 'simple'
+    parser.add_argument("--scheduler", type=str, default="cosine")  # 'simple'
 
     # Train
     parser.add_argument("--resume_from_checkpoint", "--resume", type=str, default=None)
@@ -151,7 +167,7 @@ if __name__ == "__main__":
 
     # Validation
     parser.add_argument("--check_val_every_n_epoch", type=int, default=1)
-    parser.add_argument("--metric", type=str, default="vacc")
+    parser.add_argument("--metric", type=str, default="vmap")
 
     # Etc
     parser.add_argument("--plugins", type=str, default=None)  # "ddp_sharded"
@@ -177,7 +193,7 @@ if __name__ == "__main__":
 
     pl.seed_everything(cfg.seed)
 
-    if cfg.metric == "vacc":
+    if (cfg.metric == "vacc") or cfg.metric == "vmap":
         cfg.metric_mode = "max"
 
     main(cfg)

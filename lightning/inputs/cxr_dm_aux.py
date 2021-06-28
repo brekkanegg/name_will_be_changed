@@ -3,10 +3,30 @@ import pytorch_lightning as pl
 import pandas as pd
 import numpy as np
 import cv2
-from scipy import ndimage
-from albumentations import CLAHE
 
-from .augmentation import get_augmentation
+# from scipy import ndimage
+# from albumentations import CLAHE
+
+from .augmentation import get_augmentation_v2
+
+
+def yolo2voc(image_height, image_width, bboxes):
+    """
+    yolo => [xmid, ymid, w, h] (normalized)
+    voc  => [x1, y1, x2, y1]
+
+    """
+    bboxes = bboxes.copy().astype(
+        float
+    )  # otherwise all value will be 0 as voc_pascal dtype is np.int
+
+    bboxes[..., [0, 2]] = bboxes[..., [0, 2]] * image_width
+    bboxes[..., [1, 3]] = bboxes[..., [1, 3]] * image_height
+
+    bboxes[..., [0, 1]] = bboxes[..., [0, 1]] - bboxes[..., [2, 3]] / 2
+    bboxes[..., [2, 3]] = bboxes[..., [0, 1]] + bboxes[..., [2, 3]]
+
+    return bboxes
 
 
 class CXRDataset(torch.utils.data.Dataset):
@@ -17,18 +37,13 @@ class CXRDataset(torch.utils.data.Dataset):
         size=1024,
         mode="train",
         transform=None,
-        apply_windowing=True,
     ):
         self.data_dir = data_dir
         self.df = df
-
         self.size = size
         self.mode = mode
         self.training = self.mode == "train"
         self.transform = transform
-        self.apply_windowing = apply_windowing
-
-        self.clahe = CLAHE(clip_limit=1.0, tile_grid_size=(8, 8), p=1.0)
 
     def __len__(self):
         return len(self.df)
@@ -52,68 +67,33 @@ class CXRDataset(torch.utils.data.Dataset):
         )
 
         label = label.astype("float32")
-
         img = cv2.imread(img_path, -1).astype("float32")
+        img = np.concatenate((img[:, :, np.newaxis],) * 3, axis=-1)
 
-        img = cv2.resize(img, (self.size, self.size))
-        if self.apply_windowing:
-            img = self.windowing(img, training=self.training)
-        img = (img - img.min()) / (img.max() - img.min())
+        mask_txt = img_path.replace(".png", ".txt")
+        mask = np.zeros(img.shape[:2])
+        h, w = img.shape[:2]
 
-        if self.transform or self.training:
+        try:
+            with open(mask_txt, "r") as f:
+                data = (
+                    np.array(f.read().replace("\n", " ").strip().split(" "))
+                    .astype(np.float32)
+                    .reshape(-1, 5)
+                )
+            bdata = data[:, 1:]
+            bboxes = yolo2voc(h, w, bdata)
+            for bbox in bboxes:
+                x1, y1, x2, y2 = [int(bi) for bi in bbox]
+                mask[x1:x2, y1:y2] = 1.0  # TODO: Check dimension
+        except ValueError:  # No opacity - empty
+            pass
 
-            if np.random.random() < 0.5:
-                img *= 255.0
-                img = img.astype(np.uint8)
-                clahe = self.clahe(image=img)
-                img = clahe["image"]
-                img = img.astype("float32")
-                img /= 255.0
+        aug = self.transform(image=img, mask=mask)
+        img = aug["image"]
+        mask = aug["mask"]
 
-            img = self.random_transform(img, self.transform)
-            # blurring and sharpening
-            prob = np.random.random()
-            if prob < 0.333:
-                min_val = np.min(img)
-                max_val = np.max(img)
-                blurred_f = ndimage.gaussian_filter(img, 2)
-                filter_blurred_f = ndimage.gaussian_filter(blurred_f, 1)
-                alpha = 30
-                img = blurred_f + alpha * (blurred_f - filter_blurred_f)
-                img = np.clip(img, min_val, max_val)
-
-        # img = self.normalization(img)
-        img = self.standardization(img)
-
-        img = np.expand_dims(img, 0)
-
-        return img, label, img_path
-
-    def windowing(self, img, training=False):
-        center = np.mean(img)
-        if training:
-            width_param = 4.5 + np.random.random()
-        else:
-            width_param = 5.0
-        width = np.std(img) * width_param
-        low = center - width / 2
-        high = center + width / 2
-        img[img < low] = low
-        img[img > high] = high
-        return img
-
-    def normalization(self, img, eps=1e-5):
-        img = (img - img.mean()) / (img.std() + eps)
-        return img
-
-    def standardization(self, img, mean=0.51718974, std=0.21841954):
-        img = (img - mean) / std
-        return img
-
-    def random_transform(self, img, transform):
-        augment = transform(image=img)
-        img = augment["image"]
-        return img
+        return img, label, mask, img_path
 
 
 class CXRDataModule(pl.LightningDataModule):
@@ -155,20 +135,19 @@ class CXRDataModule(pl.LightningDataModule):
 
         df_train = df[(df["fold"] != self.cfg.fold_index)].reset_index(drop=True)
         df_valid = df[(df["fold"] == self.cfg.fold_index)].reset_index(drop=True)
-        df_test = df[(df["fold"] == self.cfg.fold_index)].reset_index(drop=True)
+        # df_test = df[(df["fold"] == self.cfg.fold_index)].reset_index(drop=True)
 
         print("Training :: ", len(df_train))
         print("Validation :: ", len(df_valid))
 
-        transform = get_augmentation(self.cfg.image_size, self.cfg.image_size, p=0.5)
+        train_aug, val_aug = get_augmentation_v2(self.cfg)
 
         self.train_dataset = CXRDataset(
             data_dir=self.cfg.data_dir,
             df=df_train,
             size=self.cfg.image_size,
             mode="train",
-            transform=transform,
-            apply_windowing=True,
+            transform=train_aug,
         )
 
         self.val_dataset = CXRDataset(
@@ -176,16 +155,16 @@ class CXRDataModule(pl.LightningDataModule):
             df=df_valid,
             size=self.cfg.image_size,
             mode="val",
-            transform=None,
+            transform=val_aug,
         )
 
-        self.test_dataset = CXRDataset(
-            data_dir=self.cfg.data_dir,
-            df=df_test,
-            size=self.cfg.image_size,
-            mode="test",
-            transform=None,
-        )
+        # self.test_dataset = CXRDataset(
+        #     data_dir=self.cfg.data_dir,
+        #     df=df_test,
+        #     size=self.cfg.image_size,
+        #     mode="test",
+        #     transform=va,
+        # )
 
     def train_dataloader(self):
         train_dataloader = torch.utils.data.DataLoader(

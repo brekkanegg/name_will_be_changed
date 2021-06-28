@@ -95,6 +95,7 @@ if __name__ == "__main__":
     # Model
     parser.add_argument("--model", type=str, default="tf_efficientnet_b4")  # 'simple'
     parser.add_argument("--pretrained", action="store_true")  # 'simple'
+    parser.add_argument("--in_channels", type=int, default=3)  # 'simple'
 
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")

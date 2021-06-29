@@ -25,11 +25,11 @@ def get_augmentation(h, w, p=0.5):
     return transform
 
 
-def get_augmentation_v2(cfg):
-    h, w = cfg.image_size, cfg.image_size
+def get_augmentation_v2(image_size):
+    h, w = image_size, image_size
     train_aug = A.Compose(
         [
-            A.Resize(cfg.image_size, cfg.image_size),
+            A.Resize(image_size, image_size),
             A.RandomSizedCrop(
                 min_max_height=(h - int(h * 0.15), h), height=h, width=w, p=0.5
             ),
@@ -38,10 +38,12 @@ def get_augmentation_v2(cfg):
                 shift_limit=0.15,
                 scale_limit=0.15,
                 rotate_limit=30,
-                border_mode=cv2.BORDER_REPLICATE,
+                border_mode=cv2.BORDER_REFLECT_101,
                 p=0.5,
             ),
-            A.CoarseDropout(p=0.5),  # cutout
+            A.CoarseDropout(
+                p=0.5, max_height=h // 32, max_width=w // 32, max_holes=32, min_holes=8
+            ),  # cutout
             # A.OneOf([A.Cutout(), A.ElasticTransform()], p=0.5),
             A.Normalize(
                 mean=[0.485, 0.456, 0.406],
@@ -55,7 +57,7 @@ def get_augmentation_v2(cfg):
 
     val_aug = A.Compose(
         [
-            A.Resize(cfg.image_size, cfg.image_size),
+            A.Resize(image_size, image_size),
             A.Normalize(
                 mean=[0.485, 0.456, 0.406],
                 std=[0.229, 0.224, 0.225],

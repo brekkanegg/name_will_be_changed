@@ -11,8 +11,6 @@ import torch
 import pytorch_lightning as pl
 import torch.multiprocessing
 
-from lit_model import LitModel
-from inputs.cxr_dm import CXRDataModule
 
 from callbacks import visualizer
 
@@ -82,10 +80,15 @@ def main(cfg):
 
     if cfg.data_version == 2:
         from inputs.cxr_dm_2 import CXRDataModule
+    else:
+        from inputs.cxr_dm import CXRDataModule
 
     if cfg.auxiliary:
         from lit_model_aux import LitModel
         from inputs.cxr_dm_aux import CXRDataModule
+
+    else:
+        from lit_model import LitModel
 
     cxrdm = CXRDataModule(cfg)
 
@@ -122,7 +125,7 @@ if __name__ == "__main__":
     parser.add_argument("--deterministic", action="store_false")
 
     # Accelerator
-    parser.add_argument("--precision", type=int, default=32)  # 32
+    parser.add_argument("--precision", type=int, default=16)  # 32
     parser.add_argument("--accelerator", type=str, default=None)  # 'ddp' # Do not Use
     parser.add_argument("--sync_batchnorm", action="store_true")  # 'ddp'
 
@@ -135,9 +138,9 @@ if __name__ == "__main__":
 
     # Data
     parser.add_argument("--fold_index", "--fold", "--f", type=int, default=0)
-    parser.add_argument("--batch_size", "--batch", type=int, default=5)
+    parser.add_argument("--batch_size", "--batch", type=int, default=6)
     parser.add_argument("--auto_scale_batch_size", default=None)  # 'power'
-    parser.add_argument("--image_size", type=int, default=600)
+    parser.add_argument("--image_size", type=int, default=640)
     # parser.add_argument("--neg_ratio", "--neg", type=float, default=1.0)
     parser.add_argument("--label_smoothing", "--smooth", type=float, default=0.1)
     parser.add_argument("--data_version", "--dv", type=int, default=2)
@@ -148,13 +151,13 @@ if __name__ == "__main__":
     parser.add_argument("--pretrained", action="store_false")  # 'simple'
     parser.add_argument("--drop_rate", type=float, default=0.5)  # 'simple'
     parser.add_argument("--in_channels", type=int, default=3)  # 'simple'
-    parser.add_argument("--auxiliary", "--aux", action="store_true")  # 'simple'
+    parser.add_argument("--auxiliary", "--aux", action="store_false")  # 'simple'
 
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")  # Do not Use
     parser.add_argument("--lr", type=float, default=1e-4)  # 7e-5
     parser.add_argument("--loss", type=str, default="ce")  # 'simple'
-    parser.add_argument("--optimizer", type=str, default="sgd")  # 'simple'
+    parser.add_argument("--optimizer", type=str, default="adam")  # 'simple'
     parser.add_argument("--scheduler", type=str, default="cosine")  # 'simple'
 
     # Train

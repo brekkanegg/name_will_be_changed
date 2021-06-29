@@ -85,7 +85,7 @@ class CXRDataset(torch.utils.data.Dataset):
             bboxes = yolo2voc(h, w, bdata)
             for bbox in bboxes:
                 x1, y1, x2, y2 = [int(bi) for bi in bbox]
-                mask[x1:x2, y1:y2] = 1.0  # TODO: Check dimension
+                mask[y1:y2, x1:x2] = 1.0  # TODO: Check dimension
         except ValueError:  # No opacity - empty
             pass
 
@@ -140,7 +140,7 @@ class CXRDataModule(pl.LightningDataModule):
         print("Training :: ", len(df_train))
         print("Validation :: ", len(df_valid))
 
-        train_aug, val_aug = get_augmentation_v2(self.cfg)
+        train_aug, val_aug = get_augmentation_v2(self.cfg.image_size)
 
         self.train_dataset = CXRDataset(
             data_dir=self.cfg.data_dir,

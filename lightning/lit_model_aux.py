@@ -30,7 +30,7 @@ class LitModel(pl.LightningModule):
             "dropout": self.cfg.drop_rate,
             "activation": None,
         }
-        self.model = smp.DeepLabV3Plus(
+        self.model = smp.UnetPlusPlus(
             encoder_name="timm-efficientnet-b7",
             encoder_weights="noisy-student",
             in_channels=3,

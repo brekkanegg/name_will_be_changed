@@ -144,6 +144,7 @@ if __name__ == "__main__":
     # parser.add_argument("--neg_ratio", "--neg", type=float, default=1.0)
     parser.add_argument("--label_smoothing", "--smooth", type=float, default=0.1)
     parser.add_argument("--data_version", "--dv", type=int, default=2)
+    parser.add_argument("--augment_class", "--ac", action="store_true")
 
     # Model
     parser.add_argument("--model", type=str, default="tf_efficientnet_b7_ns")
@@ -162,7 +163,7 @@ if __name__ == "__main__":
 
     # Train
     parser.add_argument("--resume_from_checkpoint", "--resume", type=str, default=None)
-    parser.add_argument("--max_epochs", "--max_ep", type=int, default=30)
+    parser.add_argument("--max_epochs", "--max_ep", type=int, default=100)
     parser.add_argument(
         "--stochastic_weight_avg", "--swa", action="store_true"
     )  # Do not Use
@@ -170,7 +171,7 @@ if __name__ == "__main__":
 
     # Validation
     parser.add_argument("--check_val_every_n_epoch", type=int, default=1)
-    parser.add_argument("--metric", type=str, default="vmap")
+    parser.add_argument("--metric", type=str, default="map/valid")
 
     # Etc
     parser.add_argument("--plugins", type=str, default=None)  # "ddp_sharded"
@@ -196,6 +197,7 @@ if __name__ == "__main__":
 
     pl.seed_everything(cfg.seed)
 
+    cfg.metric_mode = "max"
     if (cfg.metric == "vacc") or cfg.metric == "vmap":
         cfg.metric_mode = "max"
 

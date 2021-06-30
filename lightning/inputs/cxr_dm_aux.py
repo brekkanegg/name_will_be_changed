@@ -137,6 +137,31 @@ class CXRDataModule(pl.LightningDataModule):
         df_valid = df[(df["fold"] == self.cfg.fold_index)].reset_index(drop=True)
         # df_test = df[(df["fold"] == self.cfg.fold_index)].reset_index(drop=True)
 
+        if self.cfg.augment_class:
+            negative = df_train[df_train["Negative for Pneumonia"] == 1]
+            typical = df_train[df_train["Typical Appearance"] == 1]
+            indeterminate = df_train[df_train["Indeterminate Appearance"] == 1]
+            atypical = df_train[df_train["Atypical Appearance"] == 1]
+
+            df_aug_train = pd.concat(
+                (
+                    negative,
+                    negative,
+                    typical,
+                    indeterminate,
+                    indeterminate,
+                    indeterminate,
+                    atypical,
+                    atypical,
+                    atypical,
+                    atypical,
+                    atypical,
+                    atypical,
+                ),
+                axis=0
+            ).reset_index(drop=True)
+            df_train = df_aug_train            
+
         print("Training :: ", len(df_train))
         print("Validation :: ", len(df_valid))
 

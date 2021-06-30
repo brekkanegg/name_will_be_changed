@@ -127,7 +127,11 @@ class LitModel(pl.LightningModule):
 
         loss = seg_loss + cls_loss
 
-        log_dict = {"tseg": seg_loss, "tcls": cls_loss, "tmap": _map}
+        log_dict = {
+            "loss/train/seg": seg_loss,
+            "loss/train/cls": cls_loss,
+            "map/train": _map,
+        }
         self.log_dict(
             log_dict,
             on_step=False,
@@ -166,7 +170,7 @@ class LitModel(pl.LightningModule):
         #     ap = self.val_ap(torch.softmax(logit, axis=1), torch.argmax(label, axis=1))
         #     loss = self.criterion(logit, torch.argmax(label, axis=1))
 
-        log_dict = {"vseg": seg_loss, "vcls": cls_loss}
+        log_dict = {"loss/valid/seg": seg_loss, "loss/valid/cls": cls_loss}
         self.log_dict(
             log_dict,
             on_step=False,
@@ -204,11 +208,12 @@ class LitModel(pl.LightningModule):
         map_result = np.mean(ap_result)
 
         log_dict = {
-            "vmap": map_result,
-            "vap_0": ap_result[0],
-            "vap_1": ap_result[1],
-            "vap_2": ap_result[2],
-            "vap_3": ap_result[3],
+            # "vacc": acc_result,
+            "map/valid": map_result,
+            "ap/valid/0": ap_result[0],
+            "ap/valid/1": ap_result[1],
+            "ap/valid/2": ap_result[2],
+            "ap/valid/3": ap_result[3],
         }
         self.log_dict(
             log_dict,

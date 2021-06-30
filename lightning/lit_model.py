@@ -32,8 +32,8 @@ class LitModel(pl.LightningModule):
         elif self.cfg.loss == "ce":
             self.criterion = torch.nn.CrossEntropyLoss()
 
-        self.train_acc = torchmetrics.Accuracy()
-        self.val_acc = torchmetrics.Accuracy()
+        # self.train_acc = torchmetrics.Accuracy()
+        # self.val_acc = torchmetrics.Accuracy()
 
         self.train_ap = torchmetrics.AveragePrecision(num_classes=4)
         self.val_ap = torchmetrics.AveragePrecision(num_classes=4)
@@ -88,12 +88,12 @@ class LitModel(pl.LightningModule):
         logit = self.model(img)
 
         if self.cfg.loss == "bce":
-            acc = self.train_acc(torch.sigmoid(logit), label.int())
+            # acc = self.train_acc(torch.sigmoid(logit), label.int())
             ap = self.train_ap(torch.sigmoid(logit), torch.argmax(label, axis=1))
             loss = self.criterion(logit, label)
 
         elif self.cfg.loss == "ce":
-            acc = self.train_acc(torch.softmax(logit, axis=1), label.int())
+            # acc = self.train_acc(torch.softmax(logit, axis=1), label.int())
             ap = self.train_ap(
                 torch.softmax(logit, axis=1), torch.argmax(label, axis=1)
             )
@@ -104,7 +104,7 @@ class LitModel(pl.LightningModule):
         # self.last_train_batchs = img, label, img_path
         # self.last_train_logits = logit
 
-        log_dict = {"tloss": loss, "tacc": acc, "tmap": _map}
+        log_dict = {"loss/train": loss, "map/train": _map}
         self.log_dict(
             log_dict,
             on_step=False,
@@ -129,14 +129,14 @@ class LitModel(pl.LightningModule):
         # Metric
         if self.cfg.loss == "bce":
             loss = self.criterion(logit, label)
-            acc = self.val_acc(torch.sigmoid(logit), label.int())
+            # acc = self.val_acc(torch.sigmoid(logit), label.int())
             ap = self.val_ap(torch.sigmoid(logit), label.int())
         elif self.cfg.loss == "ce":
-            acc = self.val_acc(torch.softmax(logit, axis=1), label.int())
+            # acc = self.val_acc(torch.softmax(logit, axis=1), label.int())
             ap = self.val_ap(torch.softmax(logit, axis=1), torch.argmax(label, axis=1))
             loss = self.criterion(logit, torch.argmax(label, axis=1))
 
-        log_dict = {"vloss": loss}
+        log_dict = {"loss/valid": loss}
         self.log_dict(
             log_dict,
             on_step=False,
@@ -168,18 +168,18 @@ class LitModel(pl.LightningModule):
         # if self.use_ddp:
         #     return
 
-        acc_result = self.val_acc.compute()
+        # acc_result = self.val_acc.compute()
         # ap_result = self.val_ap.compute()
         ap_result = [i.detach().cpu().item() for i in self.val_ap.compute()]
         map_result = np.mean(ap_result)
 
         log_dict = {
-            "vacc": acc_result,
-            "vmap": map_result,
-            "vap_0": ap_result[0],
-            "vap_1": ap_result[1],
-            "vap_2": ap_result[2],
-            "vap_3": ap_result[3],
+            # "vacc": acc_result,
+            "map/valid": map_result,
+            "ap/valid/0": ap_result[0],
+            "ap/valid/1": ap_result[1],
+            "ap/valid/2": ap_result[2],
+            "ap/valid/3": ap_result[3],
         }
         self.log_dict(
             log_dict,

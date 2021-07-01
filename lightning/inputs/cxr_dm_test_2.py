@@ -39,6 +39,7 @@ class CXRDataset(torch.utils.data.Dataset):
         img_path = self.source[index]
 
         img = cv2.imread(img_path, -1).astype("float32")
+        img = np.concatenate((img[:, :, np.newaxis],) * 3, axis=-1)
         img = self.transform(image=img)["image"]
 
         return img, img_path

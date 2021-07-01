@@ -39,45 +39,9 @@ class CXRDataset(torch.utils.data.Dataset):
         img_path = self.source[index]
 
         img = cv2.imread(img_path, -1).astype("float32")
-        img = self.transform(img)["image"]
-
-        # img = cv2.resize(img, (self.size, self.size))
-        # if self.apply_windowing:
-        #     img = self.windowing(img, training=self.training)
-
-        # img = (img - img.min()) / (img.max() - img.min())
-
-        # img = self.standardization(img)
-
-        # img = np.expand_dims(img, 0)
+        img = self.transform(image=img)["image"]
 
         return img, img_path
-
-    # def windowing(self, img, training=False):
-    #     center = np.mean(img)
-    #     if training:
-    #         width_param = 4.5 + np.random.random()
-    #     else:
-    #         width_param = 5.0
-    #     width = np.std(img) * width_param
-    #     low = center - width / 2
-    #     high = center + width / 2
-    #     img[img < low] = low
-    #     img[img > high] = high
-    #     return img
-
-    # def normalization(self, img, eps=1e-5):
-    #     img = (img - img.mean()) / (img.std() + eps)
-    #     return img
-
-    # def standardization(self, img, mean=0.51718974, std=0.21841954):
-    #     img = (img - mean) / std
-    #     return img
-
-    # def random_transform(self, img, transform):
-    #     augment = transform(image=img)
-    #     img = augment["image"]
-    #     return img
 
 
 class CXRDataModule(pl.LightningDataModule):
@@ -88,7 +52,7 @@ class CXRDataModule(pl.LightningDataModule):
         self.setup()
 
     def setup(self, stage=None):
-        _, val_aug = get_augmentation_v2(self.cfg)
+        _, val_aug = get_augmentation_v2(self.cfg.image_size)
 
         self.test_dataset = CXRDataset(
             data_dir=self.cfg.data_dir,

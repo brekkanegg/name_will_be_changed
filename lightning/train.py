@@ -156,10 +156,11 @@ if __name__ == "__main__":
 
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")  # Do not Use
-    parser.add_argument("--lr", type=float, default=1e-4)  # 7e-5
+    parser.add_argument("--lr", type=float, default=3e-5)  # 7e-5
     parser.add_argument("--loss", type=str, default="ce")  # 'simple'
     parser.add_argument("--optimizer", type=str, default="adam")  # 'simple'
     parser.add_argument("--scheduler", type=str, default="cosine")  # 'simple'
+    parser.add_argument("--aux_weight", type=float, default=0.5)  # 'simple'
 
     # Train
     parser.add_argument("--resume_from_checkpoint", "--resume", type=str, default=None)

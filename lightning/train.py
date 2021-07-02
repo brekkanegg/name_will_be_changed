@@ -21,7 +21,7 @@ def main(cfg):
     # Callbacks
     early_stopping = pl.callbacks.EarlyStopping(
         monitor=cfg.metric,
-        patience=100,
+        patience=10,
         verbose=True,
         mode=cfg.metric_mode,
     )
@@ -86,12 +86,14 @@ def main(cfg):
     if cfg.auxiliary:
         from lit_model_aux import LitModel
         from inputs.cxr_dm_aux import CXRDataModule
-
     else:
         from lit_model import LitModel
 
-    cxrdm = CXRDataModule(cfg)
+    if cfg.classify_2class:
+        from lit_model_2class import LitModel
+        from inputs.cxr_dm_2class import CXRDataModule
 
+    cxrdm = CXRDataModule(cfg)
     model = LitModel(cfg)
 
     trainer.fit(model, datamodule=cxrdm)
@@ -153,10 +155,11 @@ if __name__ == "__main__":
     parser.add_argument("--drop_rate", type=float, default=0.5)  # 'simple'
     parser.add_argument("--in_channels", type=int, default=3)  # 'simple'
     parser.add_argument("--auxiliary", "--aux", action="store_false")  # 'simple'
+    parser.add_argument("--classify_2class", "--c2", action="store_true")  # 'simple'
 
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")  # Do not Use
-    parser.add_argument("--lr", type=float, default=3e-5)  # 7e-5
+    parser.add_argument("--lr", type=float, default=3e-6)  # 7e-5
     parser.add_argument("--loss", type=str, default="ce")  # 'simple'
     parser.add_argument("--optimizer", type=str, default="adam")  # 'simple'
     parser.add_argument("--scheduler", type=str, default="cosine")  # 'simple'
@@ -172,7 +175,7 @@ if __name__ == "__main__":
 
     # Validation
     parser.add_argument("--check_val_every_n_epoch", type=int, default=1)
-    parser.add_argument("--metric", type=str, default="map/valid")
+    parser.add_argument("--metric", type=str, default="ap/valid")
 
     # Etc
     parser.add_argument("--plugins", type=str, default=None)  # "ddp_sharded"

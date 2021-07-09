@@ -39,13 +39,15 @@ class LitModel(pl.LightningModule):
             aux_params=aux_params,
         )
 
-        # if self.cfg.loss == "bce":
-        #     self.criterion = torch.nn.BCEWithLogitsLoss()  # torch.nn.CrossEntropyLoss()
-        # elif self.cfg.loss == "ce":
-        #     self.criterion = torch.nn.CrossEntropyLoss()
-
         self.seg_criterion = torch.nn.BCEWithLogitsLoss()  # torch.nn.CrossEntropyLoss()
-        self.cls_criterion = torch.nn.CrossEntropyLoss()
+        if self.cfg.loss == "bce":
+            self.cls_criterion = torch.nn.BCEWithLogitsLoss()
+            if self.cfg.pos_weight:
+                pw = torch.FloatTensor([float(i) for i in self.cfg.pos_weight]).cuda()
+                self.cls_criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pw)
+
+        elif self.cfg.loss == "ce":
+            self.cls_criterion = torch.nn.CrossEntropyLoss()
 
         self.train_ap = torchmetrics.AveragePrecision(num_classes=4)
         self.val_ap = torchmetrics.AveragePrecision(num_classes=4)
@@ -73,14 +75,6 @@ class LitModel(pl.LightningModule):
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
                 optimizer=optimizer, T_max=self.cfg.max_epochs
             )
-        # elif self.cfg.scheduler == "plateau":
-        #     scheduler = {
-        #         "optimizer": optimizer,
-        #         "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
-        #             optimizer=optimizer, mode="min", factor=0.1
-        #         ),
-        #         "monitor": "vloss",
-        #     }
 
         lr_scheduler = {
             "scheduler": scheduler,
@@ -95,35 +89,20 @@ class LitModel(pl.LightningModule):
         # training_step defined the train loop.
         # It is independent of forward
         img, label, mask, img_path = batch
-        # img = img.permute(0, 3, 1, 2)
 
         seg_logit, cls_logit = self.model(img)
 
         seg_loss = self.seg_criterion(seg_logit[:, 0, :, :], mask)
-        cls_loss = self.cls_criterion(cls_logit, torch.argmax(label, axis=1))
+        if self.cfg.loss == "bce":
+            cls_loss = self.cls_criterion(cls_logit, label)
+            ap = self.train_ap(torch.sigmoid(cls_logit), torch.argmax(label, axis=1))
 
-        ap = self.train_ap(
-            torch.softmax(cls_logit, axis=1), torch.argmax(label, axis=1)
-        )
+        elif self.cfg.loss == "ce":
+            cls_loss = self.cls_criterion(cls_logit, torch.argmax(label, axis=1))
+            ap = self.train_ap(
+                torch.softmax(cls_logit, axis=1), torch.argmax(label, axis=1)
+            )
         _map = np.nanmean([i.detach().cpu().item() for i in ap])
-
-        # if self.cfg.loss == "bce":
-        #     # acc = self.train_acc(torch.sigmoid(logit), label.int())
-        #     ap = self.train_ap(torch.sigmoid(logit), torch.argmax(label, axis=1))
-        #     loss = self.criterion(logit, label)
-
-        # elif self.cfg.loss == "ce":
-        #     # acc = self.train_acc(torch.softmax(logit, axis=1), label.int())
-        #     ap = self.train_ap(
-        #         torch.softmax(logit, axis=1), torch.argmax(label, axis=1)
-        #     )
-        #     loss = self.criterion(logit, torch.argmax(label, axis=1))
-
-        #     _map = np.nanmean([i.detach().cpu().item() for i in ap])
-
-        # For Callback Drawing later
-        # self.last_train_batchs = img, label, img_path
-        # self.last_train_logits = logit
 
         loss = seg_loss + cls_loss
 
@@ -150,10 +129,17 @@ class LitModel(pl.LightningModule):
         seg_logit, cls_logit = self.model(img)
 
         seg_loss = self.seg_criterion(seg_logit[:, 0, :, :], mask)
-        cls_loss = self.cls_criterion(cls_logit, torch.argmax(label, axis=1))
+        if self.cfg.loss == "bce":
+            cls_loss = self.cls_criterion(cls_logit, label)
+            ap = self.val_ap(torch.sigmoid(cls_logit), torch.argmax(label, axis=1))
+        elif self.cfg.loss == "ce":
+            cls_loss = self.cls_criterion(cls_logit, torch.argmax(label, axis=1))
+            ap = self.val_ap(
+                torch.softmax(cls_logit, axis=1), torch.argmax(label, axis=1)
+            )
+
         loss = seg_loss + cls_loss
 
-        ap = self.val_ap(torch.softmax(cls_logit, axis=1), torch.argmax(label, axis=1))
         _map = np.nanmean([i.detach().cpu().item() for i in ap])
 
         # For CallBack Drawing

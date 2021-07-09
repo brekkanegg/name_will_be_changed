@@ -31,12 +31,7 @@ def yolo2voc(image_height, image_width, bboxes):
 
 class CXRDataset(torch.utils.data.Dataset):
     def __init__(
-        self,
-        data_dir,
-        df,
-        size=1024,
-        mode="train",
-        transform=None,
+        self, data_dir, df, size=1024, mode="train", transform=None, smooth=None
     ):
         self.data_dir = data_dir
         self.df = df
@@ -44,6 +39,7 @@ class CXRDataset(torch.utils.data.Dataset):
         self.mode = mode
         self.training = self.mode == "train"
         self.transform = transform
+        self.smooth = smooth
 
     def __len__(self):
         return len(self.df)
@@ -65,6 +61,8 @@ class CXRDataset(torch.utils.data.Dataset):
                 ]
             )
         )
+        if self.smooth:
+            label = np.clip(label, self.smooth, 1 - self.smooth)
 
         label = label.astype("float32")
         img = cv2.imread(img_path, -1).astype("float32")
@@ -158,9 +156,9 @@ class CXRDataModule(pl.LightningDataModule):
                     atypical,
                     atypical,
                 ),
-                axis=0
+                axis=0,
             ).reset_index(drop=True)
-            df_train = df_aug_train            
+            df_train = df_aug_train
 
         print("Training :: ", len(df_train))
         print("Validation :: ", len(df_valid))
@@ -173,6 +171,7 @@ class CXRDataModule(pl.LightningDataModule):
             size=self.cfg.image_size,
             mode="train",
             transform=train_aug,
+            smooth=self.cfg.label_smoothing,
         )
 
         self.val_dataset = CXRDataset(

@@ -10,7 +10,7 @@ import os
 import torch
 import pytorch_lightning as pl
 import torch.multiprocessing
-
+from datetime import date
 
 from callbacks import visualizer
 
@@ -78,16 +78,24 @@ def main(cfg):
         callbacks=callbacks,
     )
 
-    if cfg.data_version == 2:
-        from inputs.cxr_dm_2 import CXRDataModule
-    else:
-        from inputs.cxr_dm import CXRDataModule
-
     if cfg.auxiliary:
         from lit_model_aux import LitModel
         from inputs.cxr_dm_aux import CXRDataModule
     else:
+        from inputs.cxr_dm_2 import CXRDataModule
         from lit_model import LitModel
+
+    # if cfg.data_version == 2:
+    #     from inputs.cxr_dm_2 import CXRDataModule
+    # else:
+    #     print("Warning: data version should be 2 or aux")
+    #     from inputs.cxr_dm import CXRDataModule
+
+    # if cfg.auxiliary:
+    #     from lit_model_aux import LitModel
+    #     from inputs.cxr_dm_aux import CXRDataModule
+    # else:
+    #     from lit_model import LitModel
 
     if cfg.classify_2class:
         from lit_model_2class import LitModel
@@ -105,8 +113,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # Path
-    parser.add_argument("--name", type=str, required=True)
-    parser.add_argument("--seed", type=int, default=52)
+    parser.add_argument("--name", type=str, default=None)
+    parser.add_argument("--seed", type=int, default=522)
     parser.add_argument("--default_root_dir", "--root_dir", type=str, default=None)
     # '/home/minki/cxr/reproduce'
     parser.add_argument(
@@ -123,8 +131,8 @@ if __name__ == "__main__":
     parser.add_argument("--gpus", "--g", default="0")  # "7", "2,3"
     parser.add_argument("--num_nodes", "--nn", type=int, default=1)
     parser.add_argument("--num_workers", "--nw", type=int, default=8)
-    parser.add_argument("--benchmark", action="store_true")
-    parser.add_argument("--deterministic", action="store_false")
+    parser.add_argument("--benchmark", action="store_false")
+    parser.add_argument("--deterministic", action="store_true")
 
     # Accelerator
     parser.add_argument("--precision", type=int, default=16)  # 32
@@ -140,11 +148,11 @@ if __name__ == "__main__":
 
     # Data
     parser.add_argument("--fold_index", "--fold", "--f", type=int, default=0)
-    parser.add_argument("--batch_size", "--batch", type=int, default=6)
+    parser.add_argument("--batch_size", "--batch", type=int, default=4)
     parser.add_argument("--auto_scale_batch_size", default=None)  # 'power'
     parser.add_argument("--image_size", type=int, default=640)
     # parser.add_argument("--neg_ratio", "--neg", type=float, default=1.0)
-    parser.add_argument("--label_smoothing", "--smooth", type=float, default=0.1)
+    parser.add_argument("--label_smoothing", "--smooth", type=float, default=0.0)
     parser.add_argument("--data_version", "--dv", type=int, default=2)
     parser.add_argument("--augment_class", "--ac", action="store_true")
 
@@ -160,10 +168,14 @@ if __name__ == "__main__":
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")  # Do not Use
     parser.add_argument("--lr", type=float, default=3e-6)  # 7e-5
-    parser.add_argument("--loss", type=str, default="ce")  # 'simple'
+    parser.add_argument("--loss", type=str, default="bce")  # 'simple'
+    parser.add_argument(
+        "--pos_weight", "--pw", nargs="+", default=None
+    )  # [1., 1., 2, 3.]
     parser.add_argument("--optimizer", type=str, default="adam")  # 'simple'
     parser.add_argument("--scheduler", type=str, default="cosine")  # 'simple'
     parser.add_argument("--aux_weight", type=float, default=0.5)  # 'simple'
+    parser.add_argument("--weight_decay", "--wd", type=float, default=3e-6)
 
     # Train
     parser.add_argument("--resume_from_checkpoint", "--resume", type=str, default=None)
@@ -175,15 +187,25 @@ if __name__ == "__main__":
 
     # Validation
     parser.add_argument("--check_val_every_n_epoch", type=int, default=1)
-    parser.add_argument("--metric", type=str, default="ap/valid")
+    parser.add_argument("--metric", type=str, default="map/valid")
 
     # Etc
     parser.add_argument("--plugins", type=str, default=None)  # "ddp_sharded"
     parser.add_argument("--logger", type=str, default=True)
     parser.add_argument("--logging_batch_interval", type=int, default=300)
 
+    parser.add_argument("--option", type=str, default=None)
+
     cfg = parser.parse_args()
     # cfg.weights_save_path = f"./logs/{cfg.name}"
+
+    if cfg.name is None:
+        the_date = "".join(date.today().isoformat().split("-")[1:])
+
+        cfg.name = f"fold{cfg.fold_index}_{cfg.model}_{cfg.image_size}_{the_date}"
+        if cfg.option:
+            cfg.name += f"_{cfg.option}"
+
     cfg.weights_save_path = f"{cfg.save_dir}/ckpt/{cfg.name}"
 
     # FIXME: Need to specify gpu for DDP usage

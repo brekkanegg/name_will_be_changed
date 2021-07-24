@@ -118,13 +118,13 @@ if __name__ == "__main__":
     parser.add_argument("--default_root_dir", "--root_dir", type=str, default=None)
     # '/home/minki/cxr/reproduce'
     parser.add_argument(
-        "--save_dir", type=str, default="/data/minki/kaggle/siim-covid19/lightning"
+        "--save_dir", type=str, default="/data/kaggle-siim-covid19/lightning"
     )
     # parser.add_argument("--weights_save_path", "--weight_dir", type=str, default=None)
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="/data/minki/kaggle/siim-covid19/image_1280",
+        default="/data/kaggle-siim-covid19/image_1280",
     )
 
     # Resource
@@ -159,16 +159,16 @@ if __name__ == "__main__":
     # Model
     parser.add_argument("--model", type=str, default="tf_efficientnet_b7_ns")
     # tf_efficientnet_l2_ns, tf_efficientnetv2_l_in21ft1k, "tf_efficientnet_b7_ns"
-    parser.add_argument("--pretrained", action="store_false")  # 'simple'
-    parser.add_argument("--drop_rate", type=float, default=0.5)  # 'simple'
-    parser.add_argument("--in_channels", type=int, default=3)  # 'simple'
-    parser.add_argument("--auxiliary", "--aux", action="store_false")  # 'simple'
-    parser.add_argument("--classify_2class", "--c2", action="store_true")  # 'simple'
+    parser.add_argument("--pretrained", action="store_false")  
+    parser.add_argument("--drop_rate", type=float, default=0.5) 
+    parser.add_argument("--in_channels", type=int, default=3)  
+    parser.add_argument("--auxiliary", "--aux", action="store_false") 
+    parser.add_argument("--classify_2class", "--c2", action="store_true")
 
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")  # Do not Use
     parser.add_argument("--lr", type=float, default=3e-6)  # 7e-5
-    parser.add_argument("--loss", type=str, default="bce")  # 'simple'
+    parser.add_argument("--loss", type=str, default="be")  
     parser.add_argument(
         "--pos_weight", "--pw", nargs="+", default=None
     )  # [1., 1., 2, 3.]
@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
     # Train
     parser.add_argument("--resume_from_checkpoint", "--resume", type=str, default=None)
-    parser.add_argument("--max_epochs", "--max_ep", type=int, default=100)
+    parser.add_argument("--max_epochs", "--max_ep", type=int, default=30)
     parser.add_argument(
         "--stochastic_weight_avg", "--swa", action="store_true"
     )  # Do not Use

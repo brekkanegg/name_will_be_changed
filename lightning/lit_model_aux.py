@@ -31,7 +31,7 @@ class LitModel(pl.LightningModule):
             "activation": None,
         }
         self.model = smp.UnetPlusPlus(
-            encoder_name="timm-efficientnet-b7",
+            encoder_name=cfg.model, #"timm-efficientnet-b7",
             encoder_weights="noisy-student",
             in_channels=3,
             classes=1,

@@ -23,7 +23,7 @@ class LitModel(pl.LightningModule):
             in_chans=cfg.in_channels,
             num_classes=4,
         )
-        if 'dropblock' in self.cfg:
+        if self.cfg.dropblock:
             print('Dropping last block to prevent overfitting')
             #self.model.blocks[-1] = nn.Identity()
             #in_features = self.model.blocks[-2][-1].bn3.num_features

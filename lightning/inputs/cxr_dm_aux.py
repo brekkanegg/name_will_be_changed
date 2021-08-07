@@ -129,7 +129,7 @@ class CXRDataModule(pl.LightningDataModule):
         # Apply fold
         df = df.sample(frac=1).reset_index(drop=True)
 
-        df["fold"] = df.index % 7
+        df["fold"] = df.index % 5
 
         df_train = df[(df["fold"] != self.cfg.fold_index)].reset_index(drop=True)
         df_valid = df[(df["fold"] == self.cfg.fold_index)].reset_index(drop=True)

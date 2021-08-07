@@ -114,7 +114,7 @@ if __name__ == "__main__":
 
     # Path
     parser.add_argument("--name", type=str, default=None)
-    parser.add_argument("--seed", type=int, default=801)
+    parser.add_argument("--seed", type=int, default=807)
     parser.add_argument("--default_root_dir", "--root_dir", type=str, default=None)
     # '/home/minki/cxr/reproduce'
         
@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
     # Data
     parser.add_argument("--fold_index", "--fold", "--f", type=int, default=0)
-    parser.add_argument("--batch_size", "--batch", type=int, default=8)
+    parser.add_argument("--batch_size", "--batch", type=int, default=5)
     parser.add_argument("--auto_scale_batch_size", default=None)  # 'power'
     parser.add_argument("--image_size", type=int, default=640)
     # parser.add_argument("--neg_ratio", "--neg", type=float, default=1.0)
@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
 
     # Model
-    parser.add_argument("--model", type=str, default="tf_efficientnetv2_l_in21ft1k")
+    parser.add_argument("--model", type=str, default="timm-efficientnet-b7") #tf_efficientnetv2_l_in21ft1k")
     # tf_efficientnet_l2_ns, tf_efficientnetv2_l_in21ft1k, "tf_efficientnet_b7_ns"
     parser.add_argument("--pretrained", action="store_false")  
     parser.add_argument("--drop_rate", type=float, default=0.5) 

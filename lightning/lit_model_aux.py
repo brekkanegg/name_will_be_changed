@@ -50,7 +50,7 @@ class LitModel(pl.LightningModule):
             self.cls_criterion = torch.nn.CrossEntropyLoss()
             if self.cfg.pos_weight:
                 pw = torch.FloatTensor([float(i) for i in self.cfg.pos_weight]).cuda()
-                self.cls_criterion = torch.nn.CrossEntropyLoss(pos_weight=pw)
+                self.cls_criterion = torch.nn.CrossEntropyLoss(weight=pw)
 
 
         self.train_ap = torchmetrics.AveragePrecision(num_classes=4)
@@ -65,10 +65,10 @@ class LitModel(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.cfg.optimizer == "adam":
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.cfg.lr)
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.cfg.lr, weight_decay=self.cfg.weight_decay)
         elif self.cfg.optimizer == "sgd":
             optimizer = torch.optim.SGD(
-                self.model.parameters(), lr=self.cfg.lr, momentum=0.9
+                self.model.parameters(), lr=self.cfg.lr, momentum=0.9, weight_decay=self.cfg.weight_decay
             )
         else:
             raise Exception('Setup appropriate optimizer')
@@ -116,7 +116,7 @@ class LitModel(pl.LightningModule):
 
         _map = np.nanmean([i.detach().cpu().item() for i in ap])
 
-        loss = seg_loss + cls_loss
+        loss = seg_loss * self.cfg.aux_weight + cls_loss
 
         log_dict = {
             "loss/train/seg": seg_loss,

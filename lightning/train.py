@@ -19,12 +19,12 @@ def main(cfg):
     print(cfg)
 
     # Callbacks
-    early_stopping = pl.callbacks.EarlyStopping(
-        monitor=cfg.metric,
-        patience=10,
-        verbose=True,
-        mode=cfg.metric_mode,
-    )
+    # early_stopping = pl.callbacks.EarlyStopping(
+    #     monitor=cfg.metric,
+    #     patience=10,
+    #     verbose=True,
+    #     mode=cfg.metric_mode,
+    # )
 
     # FIXME: DDP, SWA 일 떄 뭔가 이상하다.. 이름 설정이 안 먹힘
     model_checkpoint = pl.callbacks.ModelCheckpoint(
@@ -39,7 +39,7 @@ def main(cfg):
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval="epoch")
 
     callbacks = None
-    callbacks = [model_checkpoint, lr_monitor, early_stopping]  # , viz
+    callbacks = [model_checkpoint, lr_monitor]#, early_stopping]  # , viz
 
     logger = pl.loggers.wandb.WandbLogger(name=cfg.name, save_dir=cfg.save_dir)
 

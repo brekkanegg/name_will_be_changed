@@ -114,17 +114,21 @@ if __name__ == "__main__":
 
     # Path
     parser.add_argument("--name", type=str, default=None)
-    parser.add_argument("--seed", type=int, default=522)
+    parser.add_argument("--seed", type=int, default=801)
     parser.add_argument("--default_root_dir", "--root_dir", type=str, default=None)
     # '/home/minki/cxr/reproduce'
+        
     parser.add_argument(
-        "--save_dir", type=str, default="/data/kaggle-siim-covid19/lightning"
+        "--user_name", '--u', type=str, default="brekkanegg"
+    )
+    parser.add_argument(
+        "--save_dir", type=str, default="/data/user_name/kaggle/siim-covid19/lightning"
     )
     # parser.add_argument("--weights_save_path", "--weight_dir", type=str, default=None)
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="/data/kaggle-siim-covid19/image_1280",
+        default="/data/user_name/kaggle/siim-covid19/image_1280",
     )
 
     # Resource
@@ -148,38 +152,43 @@ if __name__ == "__main__":
 
     # Data
     parser.add_argument("--fold_index", "--fold", "--f", type=int, default=0)
-    parser.add_argument("--batch_size", "--batch", type=int, default=4)
+    parser.add_argument("--batch_size", "--batch", type=int, default=8)
     parser.add_argument("--auto_scale_batch_size", default=None)  # 'power'
     parser.add_argument("--image_size", type=int, default=640)
     # parser.add_argument("--neg_ratio", "--neg", type=float, default=1.0)
-    parser.add_argument("--label_smoothing", "--smooth", type=float, default=0.0)
+    parser.add_argument("--label_smoothing", "--smooth", type=float, default=0.015)
     parser.add_argument("--data_version", "--dv", type=int, default=2)
     parser.add_argument("--augment_class", "--ac", action="store_true")
 
+    parser.add_argument("--use_pseudo_label", "--psd", action='store_true')
+
+
     # Model
-    parser.add_argument("--model", type=str, default="tf_efficientnet_b7_ns")
+    parser.add_argument("--model", type=str, default="tf_efficientnetv2_l_in21ft1k")
     # tf_efficientnet_l2_ns, tf_efficientnetv2_l_in21ft1k, "tf_efficientnet_b7_ns"
     parser.add_argument("--pretrained", action="store_false")  
     parser.add_argument("--drop_rate", type=float, default=0.5) 
     parser.add_argument("--in_channels", type=int, default=3)  
     parser.add_argument("--auxiliary", "--aux", action="store_false") 
     parser.add_argument("--classify_2class", "--c2", action="store_true")
+    parser.add_argument("--dropblock", "--db", action="store_false")
+
 
     # Opts
     parser.add_argument("--auto_lr_find", action="store_true")  # Do not Use
-    parser.add_argument("--lr", type=float, default=3e-6)  # 7e-5
-    parser.add_argument("--loss", type=str, default="be")  
+    parser.add_argument("--lr", type=float, default=3e-4)  # 7e-5
+    parser.add_argument("--loss", type=str, default="ce")  
     parser.add_argument(
         "--pos_weight", "--pw", nargs="+", default=None
     )  # [1., 1., 2, 3.]
     parser.add_argument("--optimizer", type=str, default="adam")  # 'simple'
-    parser.add_argument("--scheduler", type=str, default="cosine")  # 'simple'
+    parser.add_argument("--scheduler", type=str, default="cosineWR")  # 'simple'
     parser.add_argument("--aux_weight", type=float, default=0.5)  # 'simple'
-    parser.add_argument("--weight_decay", "--wd", type=float, default=3e-6)
+    parser.add_argument("--weight_decay", "--wd", type=float, default=1e-5)
 
     # Train
     parser.add_argument("--resume_from_checkpoint", "--resume", type=str, default=None)
-    parser.add_argument("--max_epochs", "--max_ep", type=int, default=30)
+    parser.add_argument("--max_epochs", "--max_ep", type=int, default=60)
     parser.add_argument(
         "--stochastic_weight_avg", "--swa", action="store_true"
     )  # Do not Use
@@ -194,15 +203,23 @@ if __name__ == "__main__":
     parser.add_argument("--logger", type=str, default=True)
     parser.add_argument("--logging_batch_interval", type=int, default=300)
 
+
+
     parser.add_argument("--option", type=str, default=None)
 
     cfg = parser.parse_args()
     # cfg.weights_save_path = f"./logs/{cfg.name}"
 
+    cfg.data_dir = cfg.data_dir.replace('/user_name/', f'/{cfg.user_name}/')
+    cfg.save_dir = cfg.save_dir.replace('/user_name/', f'/{cfg.user_name}/')
+
+
     if cfg.name is None:
         the_date = "".join(date.today().isoformat().split("-")[1:])
 
         cfg.name = f"fold{cfg.fold_index}_{cfg.model}_{cfg.image_size}_{the_date}"
+        if cfg.use_pseudo_label:
+            cfg.name += "_pseudo"
         if cfg.option:
             cfg.name += f"_{cfg.option}"
 

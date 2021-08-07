@@ -23,14 +23,38 @@ class LitModel(pl.LightningModule):
             in_chans=cfg.in_channels,
             num_classes=4,
         )
+        if 'dropblock' in self.cfg:
+            print('Dropping last block to prevent overfitting')
+            #self.model.blocks[-1] = nn.Identity()
+            #in_features = self.model.blocks[-2][-1].bn3.num_features
+            self.model.blocks[6] = torch.nn.Identity()
+            in_features = 384  # this works only for tf_efficientnetv2_l_in21ft1k maybe
+            self.model.conv_head = torch.nn.Conv2d(
+                in_features, in_features * 2,
+                kernel_size=(1, 1), stride=(1, 1), bias=False)
+            self.model.bn2 = torch.nn.BatchNorm2d(
+                in_features * 2, eps=0.001, momentum=0.1, affine=True,
+                track_running_stats=True)
+            
+            self.model.classifier = torch.nn.Linear(
+                in_features * 2, 4)
+        else:
+            in_features = self.model.classifier.in_features
 
-        if self.cfg.drop_rate > 0:
+        if self.cfg.drop_rate > 0: # This only works for efficientnet in timm maybe
             self.model.drop_rate = self.cfg.drop_rate
 
         if self.cfg.loss == "bce":
-            self.criterion = torch.nn.BCEWithLogitsLoss()  # torch.nn.CrossEntropyLoss()
+            self.criterion = torch.nn.BCEWithLogitsLoss()  
+            if self.cfg.pos_weight:
+                pw = torch.FloatTensor([float(i) for i in self.cfg.pos_weight]).cuda()
+                self.cls_criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pw)
+
         elif self.cfg.loss == "ce":
             self.criterion = torch.nn.CrossEntropyLoss()
+            if self.cfg.pos_weight:
+                pw = torch.FloatTensor([float(i) for i in self.cfg.pos_weight]).cuda()
+                self.cls_criterion = torch.nn.CrossEntropyLoss(weight=pw)
 
         # self.train_acc = torchmetrics.Accuracy()
         # self.val_acc = torchmetrics.Accuracy()
@@ -47,10 +71,10 @@ class LitModel(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.cfg.optimizer == "adam":
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.cfg.lr)
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.cfg.lr, weight_decay=self.cfg.weight_decay)
         elif self.cfg.optimizer == "sgd":
             optimizer = torch.optim.SGD(
-                self.model.parameters(), lr=self.cfg.lr, momentum=0.9
+                self.model.parameters(), lr=self.cfg.lr, momentum=0.9, weight_decay=self.cfg.weight_decay
             )
 
         if self.cfg.scheduler == "cosineWR":
@@ -99,7 +123,7 @@ class LitModel(pl.LightningModule):
             )
             loss = self.criterion(logit, torch.argmax(label, axis=1))
 
-            _map = np.nanmean([i.detach().cpu().item() for i in ap])
+        _map = np.nanmean([i.detach().cpu().item() for i in ap])
         # For Callback Drawing later
         # self.last_train_batchs = img, label, img_path
         # self.last_train_logits = logit
@@ -130,11 +154,16 @@ class LitModel(pl.LightningModule):
         if self.cfg.loss == "bce":
             loss = self.criterion(logit, label)
             # acc = self.val_acc(torch.sigmoid(logit), label.int())
-            ap = self.val_ap(torch.sigmoid(logit), label.int())
+            ap = self.val_ap(torch.sigmoid(logit), torch.argmax(label, axis=1))
         elif self.cfg.loss == "ce":
             # acc = self.val_acc(torch.softmax(logit, axis=1), label.int())
             ap = self.val_ap(torch.softmax(logit, axis=1), torch.argmax(label, axis=1))
             loss = self.criterion(logit, torch.argmax(label, axis=1))
+        else:
+            raise NotImplementedError("loss should be either bce or ce")
+
+        _map = np.nanmean([i.detach().cpu().item() for i in ap])
+
 
         log_dict = {"loss/valid": loss}
         self.log_dict(

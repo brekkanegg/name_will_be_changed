@@ -18,6 +18,7 @@ class CXRDataset(torch.utils.data.Dataset):
         size=1024,
         mode="train",
         transform=None,
+        smooth=0,
     ):
         self.data_dir = data_dir
         self.df = df
@@ -25,13 +26,18 @@ class CXRDataset(torch.utils.data.Dataset):
         self.mode = mode
         self.training = self.mode == "train"
         self.transform = transform
+        self.smooth = smooth
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, index):
-        img_id = self.df.loc[index, "id"].split("_image")[0]
-        img_path = f"{self.data_dir}/train/{img_id}_image.png"
+        if np.isnan(self.df.loc[index, 'index']): # This is from pseudo_label
+            img_id = self.df.loc[index, "id"].split("_study")[0]
+            img_path = f"{self.data_dir}/test/{img_id}.png"
+        else:
+            img_id = self.df.loc[index, "id"].split("_image")[0]
+            img_path = f"{self.data_dir}/train/{img_id}_image.png"
 
         label = np.array(
             list(
@@ -48,7 +54,14 @@ class CXRDataset(torch.utils.data.Dataset):
         )
 
         label = label.astype("float32")
-        img = cv2.imread(img_path, -1).astype("float32")
+        
+        if self.smooth:
+            label = np.clip(label, self.smooth, 1 - self.smooth)
+
+        try:
+            img = cv2.imread(img_path, -1).astype("float32")
+        except:
+            print(img_path)
         img = np.concatenate((img[:, :, np.newaxis],) * 3, axis=-1)
         img = self.transform(image=img)["image"]
 
@@ -90,16 +103,31 @@ class CXRDataModule(pl.LightningDataModule):
         # Apply fold
         df = df.sample(frac=1).reset_index(drop=True)
 
-        df["fold"] = df.index % 7
+        df["fold"] = df.index % 5
 
         df_train = df[(df["fold"] != self.cfg.fold_index)].reset_index(drop=True)
         df_valid = df[(df["fold"] == self.cfg.fold_index)].reset_index(drop=True)
         # df_test = df[(df["fold"] == self.cfg.fold_index)].reset_index(drop=True)
 
+        # TODO: add pseudo-label
+        if self.cfg.use_pseudo_label:
+            df_test_pseudo = pd.read_csv('./pseudo_test_study_level.csv')
+            # remove if std is too big
+            df_test_pseudo = df_test_pseudo[df_test_pseudo['std'] < 0.2].iloc[:, :5]
+            # Temporary fix:
+            # if 'id' in df_test_pseudo.columns:
+            #     df_test_pseudo.rename(columns={'id': 'StudyInstanceUID'}, inplace=True)
+            #     df_test_pseudo['StudyInstanceUID'] = df_test_pseudo.apply(lambda row: row['StudyInstanceUID'].split('_study')[0], axis=1)
+
+            print('Pseudo Test as Train :: ', len(df_test_pseudo))
+            df_train = pd.concat([df_train, df_test_pseudo], axis=0).reset_index(drop=True)
+            df_train = df_train.sample(frac=1).reset_index(drop=True)
+
+
         print("Training :: ", len(df_train))
         print("Validation :: ", len(df_valid))
 
-        train_aug, val_aug = get_augmentation_v2(self.cfg)
+        train_aug, val_aug = get_augmentation_v2(self.cfg.image_size)
 
         self.train_dataset = CXRDataset(
             data_dir=self.cfg.data_dir,
@@ -107,6 +135,7 @@ class CXRDataModule(pl.LightningDataModule):
             size=self.cfg.image_size,
             mode="train",
             transform=train_aug,
+            smooth=self.cfg.label_smoothing,
         )
 
         self.val_dataset = CXRDataset(
